@@ -207,6 +207,7 @@ install.packages(c(
 ## 👤 Autor
 
 **Roberto Montoya Leiva**  
+**Sharon Obando Gómez**
 Proyecto académico — Análisis de Datos en R
 
 ---
