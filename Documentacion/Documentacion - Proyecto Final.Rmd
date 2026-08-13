@@ -1,0 +1,225 @@
+---
+output: 
+  html_document:
+    theme: flatly
+    highlight: pygments
+    toc: true
+    toc_float: true
+---
+<style>
+
+body {
+  background-color: #f4f8fb;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+/* Portada */
+.portada {
+  width: 80%;
+  min-height: 90vh;
+  margin: 30px auto;
+  padding: 60px 50px;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0px 8px 25px rgba(0,0,0,0.12);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Universidad */
+.universidad {
+  font-size: 26px;
+  font-weight: bold;
+  color: #1f4e79;
+  margin-bottom: 35px;
+}
+
+/* Título */
+.titulo {
+  font-size: 42px;
+  font-weight: bold;
+  color: #163a5f;
+  margin: 25px 0;
+}
+
+/* Subtítulo */
+.subtitulo {
+  font-size: 20px;
+  color: #555;
+  margin-bottom: 35px;
+}
+
+/* Información */
+.info {
+  font-size: 18px;
+  color: #333;
+  line-height: 2;
+  margin-top: 20px;
+}
+
+.linea {
+  display: inline-block;
+  min-width: 350px;
+  border-bottom: 1px solid #999;
+  margin-left: 10px;
+}
+
+/* Fecha */
+.fecha {
+  margin-top: 40px;
+  font-size: 16px;
+  color: #666;
+}
+
+</style>
+
+<div class="portada">
+
+<div class="universidad">
+Colegio Universitario de Cartago
+</div>
+
+<div class="titulo">
+Proyecto Final
+</div>
+
+<div class="subtitulo">
+Grupo E
+</div>
+
+<div class="info">
+
+<strong>Integrantes:</strong><br>
+Sharon Obando Gómez<br>
+Fiorella Abarca Valverde<br>
+Monica Mendoza Morales<br>
+Roberto Montoya Leiva<br>
+Roberto Coto Guevara
+<br>
+
+<strong>Carrera: Big Data</strong>
+<br>
+
+<strong>Materia: BD-165 · Modelos Estadísticos Avanzados</strong>
+<br>
+
+<strong>Profesor: David Martínez Salazar</strong>
+</div>
+
+<div class="fecha">
+14 de agosto de 2026
+</div>
+
+</div>
+
+<div style="page-break-after: always;"></div>
+
+--------------------------------------------------------------------------------
+
+## 1. Introducción
+
+El análisis de datos se ha convertido en una herramienta clave para muchas empresas en la actualidad. Gracias a varias técnicas, las empresas pueden entender mejor el comportamiento de sus clientes, sus productos y sus ventas, identificando patrones, diferencias entre grupos o relaciones entre variables de forma automática, algo que antes solo se podía hacer de manera superficial revisando los datos a simple vista.
+
+Para este proyecto, trabajamos con la base de datos Superstore Dataset, que contiene información de ventas de una tienda en Estados Unidos, con 9.994 registros entre variables numéricas y categóricas. Sobre esta base se aplicaron tres técnicas de análisis multivariado, cada una respondiendo una pregunta distinta: ANOVA - MANOVA, que permiten identificar si existen diferencias significativas en las ventas y la ganancia según grupos ya definidos, como la región de venta o el tipo de producto; Regresión, que permite explicar o predecir una variable numérica en función de otras; y Análisis de Cluster, que permite descubrir grupos o patrones dentro de los datos que no estaban definidos de antemano. Cada una de estas técnicas aporta una perspectiva distinta y, en conjunto, permiten tener una visión más completa del comportamiento de la tienda.
+
+El mundo del análisis de datos cambia constantemente, por lo que es importante conocer y saber aplicar distintas técnicas estadísticas y cómo estas pueden facilitar la toma de decisiones en un negocio. Por lo tanto, el propósito de nuestra investigación es aplicar ANOVA - MANOVA, Regresión y Análisis de Cluster sobre la base de datos Sample Superstore, con el fin de identificar qué factores explican mejor el comportamiento de las ventas y la ganancia de la tienda, y si es posible reconocer patrones o grupos dentro de los datos que ayuden a tomar mejores decisiones de negocio. Además, se busca complementar esta investigación con la interpretación de los resultados obtenidos en cada técnica, evidenciando su utilidad dentro del análisis de datos.
+
+## 2. Descripción de la base de datos
+
+Kaggle: https://www.kaggle.com/datasets/vivek468/superstore-dataset-final
+
+La base de datos se llama **Superstore Dataset** y la conseguimos en Kaggle. Tiene información de una tienda de ventas, con 9,994 registros (filas) y 21 columnas, entre las que están:
+
+Variables categóricas: Región (Region), Categoría del producto (Category), Sub-categoría (Sub-Category), Segmento de cliente (Segment), Modo de envío (Ship Mode), entre otras.
+
+Variables numéricas: Ventas (Sales), Ganancia (Profit), Cantidad (Quantity), Descuento (Discount).
+
+No tuvimos que buscar datos faltantes ni nada raro, la base venía bastante limpia.
+
+## 3.Exploración y preparación de los datos
+
+**Cluster**
+
+**Regresion**
+
+**ANOVA - MANOVA**
+
+Antes de realizar cualquier prueba,  primero se realizó un cambio en las variables de Region, Category y Segment estaban guardadas como texto (character) en vez de como variable categórica, las convertimos a factor, que es como R reconoce que esas columnas representan grupos y no simple texto.
+
+También revisamos cuántas observaciones había en cada grupo: notamos que no estaban parejas (por ejemplo, la región West tiene muchas más ventas registradas que South), pero eso no impide realizar el análisis.
+
+## 4. Modelos aplicados
+
+**¿Por qué usamos Cluster?**
+
+**¿Por qué usamos Regresión?**
+
+**¿Por qué usamos ANOVA - MANOVA?**
+
+Se utiliza ANOVA, ya que, se quiere comparar si la ganancia promedio (Profit) cambia dependiendo de la región donde se hace la venta (Region). Como región tiene 4 grupos, no podíamos usar solo una prueba t normal, que solo iba a comparar dos grupos, por lo tanto, para comparar varios grupos a la vez, se utiliza ANOVA que es la herramienta correcta.
+
+Se utiliza MANOVA, ya que, se queria ver si la categoría del producto y el segmento de cliente influyen al mismo tiempo en dos variables relacionadas: las ventas y la ganancia. Como estas dos variables están correlacionadas entre sí, no era correcto analizarlas por separado con dos ANOVAS, porque se estaría perdiendo esa relación entre ambas. El MANOVA nos permite analizarlas juntas como un solo vector de respuesta.
+
+## 5. Resultados
+
+**Cluster**
+
+**Regresion**
+
+**ANOVA - MANOVA**
+
+*Resultados del ANOVA (Profit según Region)*
+
+Lo primero fue revisar si se cumplían los supuestos necesarios (normalidad y que las varianzas fueran parecidas entre grupos). En este caso, como teníamos miles de datos por región, la prueba de normalidad salió que no se cumple, y la de varianzas iguales tampoco. Esto es algo normal cuando se trabaja con bases de datos grandes, no es que se realizó algo mal.
+
+Aun así, seguimos con el ANOVA porque con tantos datos, el resultado sigue siendo confiable de todas formas. El resultado que obtuvimos fue:
+
+F = 2.622, valor p = 0.0489
+
+Como el valor p es menor a 0.05, técnicamente sí hay una diferencia significativa entre las regiones, pero está muy al límite, lo que nos dice que la diferencia real entre regiones no es tan fuerte.
+
+Para saber exactamente entre qué regiones estaba la diferencia, se realizó la prueba de Tukey, que compara los grupos de dos en dos. De las 6 comparaciones posibles, solo una salió con diferencia real: West contra Central (valor p = 0.043). Las demás comparaciones no mostraron diferencias.
+
+En el gráfico de boxplot se puede ver que la región Central tiene la ganancia promedio más baja, mientras que West, East y South están más parejas entre sí y un poco más arriba.
+
+*Resultados del MANOVA (Sales y Profit según Category y Segment)*
+
+Al igual que con el ANOVA, revisamos los supuestos antes de realizar la prueba, y en este caso ninguno se cumplió completamente (otra vez, por la cantidad tan grande de datos). Aun así se realizo el MANOVA porque el tamaño de muestra grande le da robustez a la prueba.
+
+Los resultados fueron:
+
+Categoría del producto: valor p menor a 0.001 → sí hay diferencia significativa
+Segmento de cliente: valor p = 0.748 → no hay diferencia significativa
+Interacción entre categoría y segmento: valor p = 0.4036 → tampoco hay diferencia significativa
+
+Esto quiere decir que el tipo de producto (Furniture, Office Supplies o Technology) sí afecta las ventas y la ganancia, pero el tipo de cliente (Consumer, Corporate o Home Office) no hace ninguna diferencia. Se reviso esto también por separado para Ventas y para Ganancia, y en ambos casos se repite exactamente el mismo patrón: solo la categoría del producto importa.
+
+En el gráfico de líneas se nota que la categoría Technology tiene las ventas más altas en todos los segmentos, seguida de Furniture, y por último Office Supplies con las ventas más bajas, y esas diferencias se mantienen igual sin importar el segmento de cliente, lo cual confirma que no hay interacción entre las dos variables.
+
+## 6. Discusión
+
+**Cluster**
+
+**Regresion**
+
+**ANOVA - MANOVA**
+
+Con estos resultados podemos decir que el lugar donde se vende (Region) tiene un efecto débil sobre la ganancia, mientras que el tipo de producto tiene un efecto mucho más claro y fuerte tanto en ventas como en ganancia. Por otro lado, a quién se le vende (Segmento de cliente) no parece tener ningún impacto.
+
+Una limitación importante que se debe mencionar es que, al trabajar con una base de datos tan grande, no se cumplieron los supuestos estadísticos que normalmente se piden para estas pruebas (normalidad y varianzas iguales). Esto no quiere decir que invalida el análisis por completo, pero sí es algo que hay que se debe tener presente al interpretar los resultados, con estos datos rara vez todo sale como **'perfecto'** como en un ejemplo de clase, y hay que saber reconocer esas limitaciones en vez de solo ignorarlas.
+
+## 7. Conclusiones
+
+**Cluster**
+
+**Regresion**
+
+**ANOVA - MANOVA**
+
+- El análisis de ANOVA mostró que la ganancia sí varía entre regiones, pero la diferencia es débil y se concentra solo entre la región con mayor ganancia (West) y la de menor ganancia (Central).
+
+- El análisis de MANOVA mostró que la categoría de producto es el factor que realmente marca una diferencia en el comportamiento de ventas y ganancia, mientras que el segmento de cliente no influye.
+
+- En conjunto, estos resultados sugieren que, para esta tienda, las decisiones de negocio deberían enfocarse más en qué tipo de producto se vende que en dónde se vende o a qué tipo de cliente se le vende.
