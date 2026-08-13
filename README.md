@@ -204,10 +204,13 @@ install.packages(c(
 
 > Nota: en el script, la primera asignación `datos <- Sample...Superstore` debe sustituirse por `datos <- Sample_Superstore`, ya que ese es el objeto con el que se importó correctamente el archivo CSV.
 
-## 👤 Autor
+## 👤 Integrantes
 
 **Roberto Montoya Leiva**  
 **Sharon Obando Gómez**
+**Fiorella Abarca Valverde**
+**Monica Mendoza Morales**
+**Roberto Coto Guevara**  
 Proyecto académico — Análisis de Datos en R
 
 ---
