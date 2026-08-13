@@ -207,9 +207,9 @@ install.packages(c(
 ## 👤 Integrantes
 
 **Roberto Montoya Leiva**  
-**Sharon Obando Gómez**
-**Fiorella Abarca Valverde**
-**Monica Mendoza Morales**
+**Sharon Obando Gómez**  
+**Fiorella Abarca Valverde**  
+**Monica Mendoza Morales**  
 **Roberto Coto Guevara**  
 Proyecto académico — Análisis de Datos en R
 
