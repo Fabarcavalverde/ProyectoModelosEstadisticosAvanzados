@@ -1,0 +1,476 @@
+---
+title: "Proyecto_Final_Modelos"
+output: html_document
+date: "2026-08-09"
+---
+```{r, warning = FALSE, message = FALSE}
+library(tidyverse)   
+library(lubridate)   
+library(DT)          
+library(corrplot)
+```
+
+
+# Introducción
+
+
+## Contexto
+
+
+El análisis de segmentación de clientes es uno de los problemas clásicos de la minería de datos aplicada a negocios de retail. Comprender qué grupos de clientes existen dentro de una base transaccional permite diseñar estrategias diferenciadas de marketing, fidelización, precios y logística. Los métodos de clustering son la herramienta estadística central para
+descubrir esta estructura oculta, dado que no se dispone de etiquetas previas que indiquen a qué segmento pertenece cada cliente.
+
+Para este trabajo se utiliza el conjunto de datos Sample Superstore, un dataset transaccional de una cadena de retail estadounidense entre 2014 y 2017, ampliamente usado con fines didácticos (Tableau / Kaggle). El dataset está registrado a nivel de línea de pedido, por lo que se requiere un trabajo de preparación antes de aplicar los algoritmos de clustering.
+
+
+## Objetivos 
+
+**Objetivo general**
+
+Queremos usar diferentes formas de agrupar clientes, como el método particional, el método jerárquico y el método basado en densidad, para encontrar grupos de clientes que compren de manera similar. Vamos a hacer esto con la base de datos llamada Sample Superstore.
+
+
+Aquí están los objetivos específicos:
+
+1. Describir la estructura del dataset. Mostrar la calidad del dataset. Indicar las variables que se encuentran en el dataset.
+
+2. Realizar una exploración de los datos. Preparar los datos para el análisis. Limpiar los datos. Identificar y tratar los valores atípicos. Resolver los datos que faltan. Realizar el escalado de las variables.
+
+3. Usar los métodos de k-means. Usar el clustering jerárquico. Usar DBSCAN. Comparar los resultados obtenidos con cada uno de estos métodos.
+
+4. Analizar los segmentos que se forman. Definir las características de cada segmento. Hacer recomendaciones basadas en los resultados obtenidos..0
+
+
+## Pregunta de análisis
+
+> ¿Es posible identificar segmentos de clientes estadísticamente
+> diferenciados y accionables a partir de su comportamiento de compra
+> (recencia, frecuencia, monto, rentabilidad y descuentos), y qué tan
+> consistentes son los resultados entre distintos métodos de clustering?
+
+---
+
+El conjunto de datos Sample Superstore es una base de transacciones de ejemplo de una tienda minorista en Estados Unidos. Se utiliza para enseñar y aprender, y se puede encontrar en Kaggle con el nombre “Sample Superstore".
+
+
+```{r, warning = FALSE, message = FALSE}
+df <- read_csv("C:\\Modelos Estadisticos avanzados\\Proyecto Final\\Sample - Superstore.csv",
+                locale = locale(encoding = "ISO-8859-1"))
+```
+
+```{r, warning = FALSE, message = FALSE}
+nrow(df)              
+            
+
+
+```
+
+```{r, warning = FALSE, message = FALSE}
+ncol(df)   
+```
+
+```{r, warning = FALSE, message = FALSE}
+n_distinct(df$`Order ID`)
+```
+```{r, warning = FALSE, message = FALSE}
+n_distinct(df$`Customer ID`)  
+```
+
+
+La base contiene **9.994 líneas de pedido** de **5.009 órdenes** realizadas por **793 clientes**, entre enero de 2014 y diciembre de 2017. La unidad original es la **línea de pedido**: un mismo cliente puede tener varias filas. Para el análisis de clustering se necesitará agregar la información por `Customer ID` (ver sección siguiente).
+
+
+## Variables
+
+La base tiene 21 columnas. Las principales para este análisis son:
+
+| Variable | Descripción |
+|---|---|
+| `Customer ID` | Identificador único del cliente (clave de agregación) |
+| `Order ID` | Identificador de la orden de compra |
+| `Order Date` | Fecha del pedido |
+| `Sales` | Monto de venta (USD) |
+| `Quantity` | Unidades vendidas |
+| `Discount` | Proporción de descuento (0 a 1) |
+| `Profit` | Ganancia (USD, puede ser negativa) |
+| `Segment`, `Category`, `Region` | Variables descriptivas / categóricas |
+
+```{r, warning = FALSE, message = FALSE}
+names(df)
+```
+
+---
+
+# Exploración y preparación de los datos
+
+## Estructura general
+
+```{r, warning = FALSE, message = FALSE}
+str(df)
+```
+
+
+## Valores faltantes
+
+```{r, warning = FALSE, message = FALSE}
+colSums(is.na(df))
+```
+
+## Filas duplicadas
+
+```{r, warning = FALSE, message = FALSE}
+sum(duplicated(df))
+```
+
+## Corrección de tipos de datos
+
+```{r, warning = FALSE, message = FALSE}
+df$`Order Date` <- mdy(df$`Order Date`)
+df$`Ship Date`  <- mdy(df$`Ship Date`)
+
+range(df$`Order Date`) 
+```
+
+## Revisión de rangos lógicos
+
+```{r, warning = FALSE, message = FALSE}
+min(df$Sales)
+max(df$Discount)
+mean(df$Profit < 0) * 100 
+```
+
+Sales` y `Discount` están en rangos lógicos. `Profit` es negativo en
+
+**18,7%** de las filas, lo cual es válido (pedidos con mucho descuento dan
+
+pérdida) y se conserva como información relevante.
+
+## Construir variables por cliente (RFM)
+
+El dataset está a nivel de línea de pedido. Para el clustering necesitamos **una fila por cliente**, con indicadores de comportamiento tipo RFM:
+
+- **Recencia**: días desde la última compra.
+
+- **Frecuencia**: cantidad de órdenes distintas.
+
+- **Monto**: total gastado.
+
+- **Ganancia**: utilidad total generada.
+
+- **Descuento_prom**: descuento promedio recibido.
+
+```{r, warning = FALSE, message = FALSE}
+fecha_ref <- max(df$`Order Date`) + 1 
+
+clientes <- df %>%
+  group_by(`Customer ID`) %>%
+  summarise(
+    Recencia       = as.numeric(fecha_ref - max(`Order Date`)),
+    Frecuencia     = n_distinct(`Order ID`),
+    Monto          = sum(Sales),
+    Ganancia       = sum(Profit),
+    Descuento_prom = mean(Discount)
+  )
+
+dim(clientes)
+head(clientes)
+```
+
+
+```{r, warning = FALSE, message = FALSE}
+clientes_largo <- pivot_longer(clientes, cols = Recencia:Descuento_prom,
+                                names_to = "Variable", values_to = "Valor")
+
+ggplot(clientes_largo, aes(x = Valor)) +
+  geom_histogram(bins = 30, fill = "steelblue") +
+  facet_wrap(~ Variable, scales = "free") +
+  theme_minimal()
+```
+
+## Outliers 
+
+```{r outliers, warning = FALSE, message = FALSE}
+q1 <- quantile(clientes$Monto, 0.25)
+q3 <- quantile(clientes$Monto, 0.75)
+iqr <- q3 - q1
+limite_sup <- q3 + 1.5 * iqr
+
+sum(clientes$Monto > limite_sup)
+```
+
+```{r boxplot, fig.height=4}
+boxplot(clientes$Monto, clientes$Frecuencia,
+        names = c("Monto", "Frecuencia"),
+        main = "Detección de outliers")
+```
+
+
+Se han encontrado **43 clientes atípicos en Monto**. Es probable que estos sean grandes cuentas y no errores, por lo que **se conservan**. Más adelante, se les aplicará un tratamiento especial, como estandarización robusta o transformación logarítmica, para analizarlos de manera adecuada.
+
+
+## Correlaciones 
+
+```{r, warning = FALSE, message = FALSE}
+matriz_cor <- cor(clientes[, -1]) 
+corrplot(matriz_cor, method = "color", addCoef.col = "black")
+```
+
+## Verificacion de faltantes final
+
+```{r, warning = FALSE, message = FALSE}
+colSums(is.na(clientes))
+```
+
+## Escalado de variables 
+
+```{r, warning = FALSE, message = FALSE}
+clientes_z <- clientes   # copia para agregar columnas escaladas
+
+clientes_z$Recencia_z       <- as.numeric(scale(clientes$Recencia))
+clientes_z$Frecuencia_z     <- as.numeric(scale(clientes$Frecuencia))
+clientes_z$Monto_z          <- as.numeric(scale(clientes$Monto))
+clientes_z$Ganancia_z       <- as.numeric(scale(clientes$Ganancia))
+clientes_z$Descuento_prom_z <- as.numeric(scale(clientes$Descuento_prom))
+
+head(clientes_z)
+```
+
+
+```{r, warning = FALSE, message = FALSE}
+
+write_csv(clientes_z, "C:\\Modelos Estadisticos avanzados\\Proyecto Final\\clientes_preparado.csv")
+```
+
+# Modelado y Clustering
+
+### Aplicación del modelo K-Means
+
+```{r, warning = FALSE, message = FALSE}
+library(tidyverse)
+library(factoextra)
+
+#Columnas que se utilizaran para el cluster
+dat_cluster <- clientes_z %>%
+  select(Frecuencia_z, Monto_z, Ganancia_z, Descuento_prom_z) %>%
+  as.data.frame()
+
+#Creación del método del codo
+codo <- fviz_nbclust(dat_cluster, kmeans, method = "wss", k.max = 10) +
+  labs(
+    title = "Método del Codo", 
+    x = "Cantidad de Clusters (K)", 
+    y = "Suma de Cuadrados Intra-Cluster (WSS)"
+  ) +
+  theme_minimal()
+
+#Creación de la silueta
+silueta <- fviz_nbclust(dat_cluster, kmeans, method = "silhouette", k.max = 10) +
+  labs(
+    title = "Silueta Promedio", 
+    x = "Cantidad de Clusters (K)", 
+    y = "Ancho de Silueta"
+  ) +
+  theme_minimal()
+
+gridExtra::grid.arrange(codo, silueta, ncol = 2)
+
+```
+
+
+Al analizar el **método del codo**, la disminución de **WSS** es marcada hasta K=4, después de esto la curva empieza a aplanarse.
+
+En cuanto al **ancho de silueta**, el valor más alto lo obtenemos en K=2, pero este número de clusters es muy pequeño y resulta poco útil para efectos de segmentación, ya que agrupa a los clientes en categorías muy generales. Realizando un análisis más detallado, podemos notar que existe un pico en K=4 que coincide con el método del codo y es el segundo valor más alto del gráfico.
+
+Tomando en consideración que ambos métodos coinciden en K=4, se selecciona este valor como el número de clusters a utilizar, ya que representa un balance adecuado entre compactación y separación de los grupos.
+
+### Selección del K y Ejecución del Modelo
+
+```{r, warning = FALSE, message = FALSE}
+
+set.seed(123)
+
+fit_kmeans <- kmeans(dat_cluster, centers = 4, nstart = 25)
+
+# Se guarda el cluster en ambos df
+clientes_z$Cluster_KM <- as.factor(fit_kmeans$cluster)
+clientes$Cluster_KM   <- as.factor(fit_kmeans$cluster)
+
+table(clientes_z$Cluster_KM)
+
+fviz_cluster(
+  fit_kmeans, 
+  data = dat_cluster,
+  ellipse.type = "convex",
+  palette = "Set2",
+  ggtheme = theme_minimal(),
+  main = "Segmentos K-Means (K = 4)"
+)
+
+perfiles_km <- clientes %>%
+  group_by(Cluster_KM) %>%
+  summarise(
+    Clientes        = n(),
+    Frecuencia_prom = round(mean(Frecuencia), 1),
+    Monto_prom      = round(mean(Monto), 2),
+    Ganancia_prom   = round(mean(Ganancia), 2),
+    Descuento_prom  = round(mean(Descuento_prom), 3)
+  )
+
+datatable(perfiles_km, options = list(dom = 't', ordering = FALSE), 
+          caption = "Promedios por Cluster")
+
+```
+Con estos resultados podemos determinar lo siguiente:
+
+**Cluster 1:** Solo hay 59 clientes, pero son los más valiosos, estos tienen una frecuencia de compra muy alta (8.3), el monto promedio de estos es el más alto (9321.85) y de mayor ganancia (2229.42) y con un descuento moderado (0.116). Estos serían categorizados como los clientes VIP.
+
+**Cluster 2:** Este cluster contiene los clientes (204) con frecuencia más baja (4.7) junto con el cluster 3, el monto promedio es el más bajo (1616.59) y lo más importante a notar es la ganancia negativa (-95.01), a pesar de tener el descuento más alto (0.256). Lo que nos indica que estos clientes nos están generando pérdidas y posiblemente esto se deba al exceso de descuentos.
+
+**Cluster 3:** El cluster más grande con 267 clientes, con una baja frecuencia (4.7) y un monto bajo (1797.63), pero marcando una diferencia con 
+el Cluster 2 porque este grupo de clientes sí genera una ganancia positiva (327.06) y tiene el descuento más bajo (0.087). Son considerados clientes de 
+bajo valor pero rentables.
+
+**Cluster 4:** El segundo grupo más grande (263 clientes) combina alta frecuencia (8.7) con un monto promedio intermedio (3564.49) y ganancia similar al Cluster 3 (330.49) pero con un descuento más alto (0.162). Son catalogados como clientes frecuentes y razonablemente rentables.
+
+
+## Clustering Jerárquico
+### Matriz de Distancias y Dendrograma
+
+Calculamos la matriz de distancias euclídeas sobre las variables escaladas y aplicamos el método de **Ward (Ward.D2)** para minimizar la varianza dentro de cada grupo.
+
+```{r, warning = FALSE, message = FALSE}
+library(cluster)
+
+dist_matrix <- dist(dat_cluster, method = "euclidean")
+
+# jerarquico con ward
+fit_hc <- hclust(dist_matrix, method = "ward.D2")
+
+fviz_dend(
+  fit_hc, 
+  k = 4, 
+  cex = 0.5, 
+  k_colors = "jco",
+  rect = TRUE, 
+  rect_fill = TRUE,
+  rect_border = "jco",
+  labels_track_height = 0.8,
+  main = "Dendrograma Jerárquico (Ward)"
+)
+
+# guardar los clusters
+clientes_z$Cluster_HC <- as.factor(cutree(fit_hc, k = 4))
+clientes$Cluster_HC   <- as.factor(cutree(fit_hc, k = 4))
+
+table(clientes_z$Cluster_HC)
+```
+
+El dendrograma nos muestra una separación clara en 4 grupos principales, marcados con colores. La primera división ocurre a una altura cercana a 40, separando los primeros dos grupos. Los grupos azul y amarillo se separan a una altura menor (~25 aproximadamente), lo que sí indica que estos dos clusters son más parecidos entre sí que respecto a los otros dos.
+
+En cuanto a los tamaños, el grupo rojo visiblemente es el más grande, seguido del azul, mientras que el amarillo es el segundo más pequeño y se fusiona a una altura bastante baja (~20), sugiriendo que es el grupo más compacto y homogéneo. El grupo gris parece tener un tamaño intermedio.
+
+
+### Clustering basado en la densidad (DBSCAN)
+
+```{r, warning = FALSE, message = FALSE}
+#install.packages("dbscan")
+library(dbscan)
+
+# grafico k-NN para estimar eps
+dbscan::kNNdistplot(dat_cluster, k = 10)
+abline(h = 1.2, col = "red", lty = 2)
+
+set.seed(123)
+fit_dbscan <- dbscan(dat_cluster, eps = 1.2, minPts = 10)
+
+clientes_z$Cluster_DBS <- as.factor(fit_dbscan$cluster)
+clientes$Cluster_DBS   <- as.factor(fit_dbscan$cluster)
+
+# table(clientes_z$Cluster_DBS)  # 0 = ruido/outliers
+
+fviz_cluster(
+  fit_dbscan, 
+  data = dat_cluster,
+  geom = "point",
+  ellipse = FALSE,
+  ggtheme = theme_minimal(),
+  main = "Clusters DBSCAN (0 = Ruido)"
+)
+```
+
+El gráfico de K-NN muestra que el punto del codo está aproximadamente en una distancia de 1.2, justo donde la curva empieza a crecer de forma pronunciada alrededor de los 750 puntos ordenados. Este valor fue el usado como **eps** para el modelo.
+
+Aún así, al aplicar DBSCAN con eps = 1.2 y minPts = 10, el algoritmo identifica un único cluster (Cluster 1), agrupando a la mayoría de los clientes en una sola región densa. Los puntos marcados como ruido (Cluster 0, en negro) corresponden a los clientes más alejados o atípicos, principalmente ubicados en los extremos del gráfico.
+
+Esto sugiere que la base de clientes no presenta regiones de densidad suficientemente distintas entre sí como para que DBSCAN las separe en múltiples grupos, a diferencia de los métodos de K-Means y clustering jerárquico, los cuales sí lograron segmentar a los clientes en 4 grupos diferenciados. En este caso, DBSCAN resulta más útil para identificar clientes atípicos (outliers) que para fines de segmentación general.
+
+## Comparación de los métodos de Clustering
+```{r, warning = FALSE, message = FALSE}
+library(fpc)
+
+sil_km <- silhouette(fit_kmeans$cluster, dist_matrix)
+sil_hc <- silhouette(cutree(fit_hc, k = 4), dist_matrix)
+
+# para dbscan excluyo el ruido del promedio
+sil_db_val <- ifelse(
+  length(unique(fit_dbscan$cluster[fit_dbscan$cluster != 0])) > 1,
+  mean(silhouette(fit_dbscan$cluster, dist_matrix)[, 3]),
+  NA
+)
+
+comparativa <- data.frame(
+  Algoritmo = c("K-Means (K=4)", "Jerárquico (K=4)", "DBSCAN (eps=1.2)"),
+  Clusters_Detectados = c(
+    length(unique(fit_kmeans$cluster)),
+    length(unique(cutree(fit_hc, k = 4))),
+    length(unique(fit_dbscan$cluster[fit_dbscan$cluster != 0]))
+  ),
+  Puntos_Ruido = c(
+    0, 
+    0, 
+    sum(fit_dbscan$cluster == 0)
+  ),
+  Silueta_Promedio = c(
+    round(mean(sil_km[, 3]), 3),
+    round(mean(sil_hc[, 3]), 3),
+    round(sil_db_val, 3)
+  )
+)
+
+datatable(comparativa, options = list(dom = 't', ordering = FALSE),
+          caption = "Comparativa de Métodos de Clustering")
+```
+
+
+La tabla comparativa nos confirma lo observado en los gráficos individuales. K-Means obtiene la silueta promedio más alta (0.281), seguido del método jerárquico (0.208), ambos logrando separar a los clientes en los 4 grupos esperados sin dejar puntos como ruido.
+
+DBSCAN, en cambio, solo detectó 1 cluster real y clasificó a 40 clientes como outliers, por lo que su silueta promedio no aplica en este caso, ya que esta métrica requiere al menos 2 clusters para poder calcularse.
+
+Con base en estos resultados, K-Means es el método más adecuado para la segmentación de clientes en este análisis, al presentar la mejor separación entre grupos y una estructura de 4 clusters consistente con lo visto antes en el método del codo y la silueta. El clustering jerárquico queda como alternativa de respaldo, mientras que DBSCAN se descarta para fines de segmentación, aunque podría servir más adelante para identificar clientes atípicos.
+
+
+
+
+## Conclusiones
+
+### Respuesta a la pregunta de análisis
+
+> **¿Es posible identificar segmentos de clientes estadísticamente diferenciados y accionables a partir de su comportamiento de compra, y qué tan consistentes son los resultados entre distintos métodos de clustering?**
+
+**Sí, es plenamente posible.** A partir de la transformación y agregación de la base transaccional a nivel de cliente con un enfoque RFM ampliado (*Frecuencia, Monto, Ganancia y Descuento promedio*), se identificaron cuatro segmentos de clientes estadísticamente bien diferenciados y directamente interpretables desde la perspectiva de negocio.
+
+---
+
+### Comparativa y consistencia entre métodos de clustering
+
+El método K-Means con K=  4 resultó ser el modelo con mejor desempeño general. Este modelo alcanzó el coeficiente de silueta promedio más alto, que fue de 0,281. La elección de K igual a 4 se basó en la combinación del Método del Codo y el análisis del Ancho de Silueta, que mostraron una caída en el WSS y el segundo pico más alto respectivamente.
+
+El Clustering Jerárquico utilizando Ward.D2 con K= a 4 se utilizó como método de validación. Este método presentó una estructura jerárquica muy consistente con K-Means, alcanzando un ancho de silueta de 0,208. El dendrograma confirmó la separación natural de la base en 4 grandes familias de clientes.
+
+El método DBSCAN con eps=  a 1,2 y minPts igual a 10 se utilizó para la detección de outliers. Sin embargo, no resultó adecuado para segmentar comercialmente a la población, ya que agrupó a casi todos los clientes en una única región densa. Sin embargo, este método identificó 40 clientes atípicos, lo que complementa el análisis de outliers detectado previamente en la fase exploratoria, en el que se identificaron 43 clientes atípicos en cuanto al monto.
+
+
+
+
+
+
