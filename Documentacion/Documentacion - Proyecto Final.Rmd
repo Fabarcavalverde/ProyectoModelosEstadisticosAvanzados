@@ -1,5 +1,7 @@
 ---
-output: 
+output:
+  pdf_document:
+    toc: true
   html_document:
     theme: flatly
     highlight: pygments
