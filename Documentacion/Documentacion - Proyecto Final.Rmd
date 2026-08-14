@@ -142,7 +142,15 @@ No tuvimos que buscar datos faltantes ni nada raro, la base venía bastante limp
 
 **Cluster**
 
+Para el clustering, lo primero que tuvimos que hacer fue transformar la base, porque originalmente venía organizada por línea de pedido (un mismo cliente podía aparecer en varias filas, una por cada compra). Pero para agrupar clientes necesitábamos una sola fila por cliente, así que juntamos toda su información en variables como: cuántos días pasaron desde su última compra, cuántas órdenes distintas hizo, cuánto gastó en total, cuánta ganancia generó y qué tanto descuento recibía en promedio.
+
+También revisamos que no hubiera datos faltantes (no había ninguno) ni filas duplicadas, y encontramos 43 clientes con montos de compra bastante más altos que el resto (outliers). Decidimos dejarlos, porque lo más probable es que sean cuentas grandes reales y no errores en los datos.
+
+Por último, como estas variables estaban en escalas muy distintas (por ejemplo, dinero gastado en dólares versus un descuento que va de 0 a 1), tuvimos que estandarizarlas antes de meterlas al modelo, para que ninguna variable "pesara" más que otra solo por tener números más grandes.
+
 **Regresion**
+
+Para la regresión usamos las variables numéricas de la base: ganancia, ventas, cantidad y descuento, y además calculamos una nueva variable (días que tardaba en llegar cada pedido) restando la fecha de envío menos la fecha de la orden. Quitamos las filas que tuvieran algún dato faltante en estas columnas para que el modelo no tuviera problemas al momento de ajustarse.
 
 **ANOVA - MANOVA**
 
@@ -154,7 +162,11 @@ También revisamos cuántas observaciones había en cada grupo: notamos que no e
 
 **¿Por qué usamos Cluster?**
 
+Usamos clustering porque queríamos agrupar a los clientes según su comportamiento de compra, sin tener grupos ya definidos de antemano (a diferencia de ANOVA, donde ya sabíamos los grupos (región, categoría)). Probamos tres métodos distintos para ver cuál agrupaba mejor: K-means (arma grupos redondos alrededor de un centro), clustering jerárquico (va uniendo clientes parecidos poco a poco hasta formar un árbol de agrupaciones) y DBSCAN (agrupa según qué tan "pegados" están los clientes entre sí). Usar los tres nos permitió comparar resultados y quedarnos con el que mejor separara a los clientes.
+
 **¿Por qué usamos Regresión?**
+
+Usamos regresión porque queríamos ver si podíamos explicar o predecir la ganancia de una venta a partir de otras variables, como el monto vendido, la cantidad de productos, el descuento aplicado y los días que tarda el envío. A diferencia de ANOVA, que compara promedios entre grupos ya definidos, la regresión nos deja ver cómo cambia una variable numérica cuando cambian otras variables numéricas relacionadas, y hasta hacer predicciones para ventas nuevas que todavía no han pasado.
 
 **¿Por qué usamos ANOVA - MANOVA?**
 
@@ -166,7 +178,29 @@ Se utiliza MANOVA, ya que, se queria ver si la categoría del producto y el segm
 
 **Cluster**
 
+Para decidir cuántos grupos usar, aplicamos el método del codo y el análisis de silueta, y ambos coincidieron en que 4 grupos era la mejor opción. Con K-means armamos esos 4 grupos:
+
+Grupo 1 (59 clientes): los más valiosos,ya que, compran seguido, gastan mucho (en promedio 9,321) y generan la mayor ganancia ($2,229 en promedio). Les llamamos clientes VIP.
+
+Grupo 2 (204 clientes): compran poco, gastan poco, y lo más importante le están generando pérdidas a la tienda (ganancia promedio negativa), probablemente porque reciben demasiado descuento (25.6% en promedio).
+
+Grupo 3 (267 clientes, el más grande): compran poco y gastan poco, igual que el grupo 2, pero a diferencia de ellos sí generan ganancia positiva, porque reciben mucho menos descuento. Son clientes de bajo valor pero rentables.
+
+Grupo 4 (263 clientes): compran seguido y gastan una cantidad intermedia, con una ganancia parecida al grupo 3. Son clientes frecuentes y razonablemente rentables.
+
+También probamos clustering jerárquico y confirmó básicamente los mismos 4 grupos, así que los resultados son consistentes entre métodos. DBSCAN, en cambio, no logró separar a los clientes en varios grupos metió a casi todos en un solo grupo grande y solo marcó 40 clientes como "raros" o atípicos. Comparando los tres métodos con la silueta (una medida de qué tan bien separados están los grupos), K-means fue el que mejor resultado dio, así que nos quedamos con ese.
+
 **Regresion**
+
+Probamos varios modelos para explicar la ganancia. El modelo con las 4 variables (ventas, cantidad, descuento y días de envío) solo explicaba un 27% de la variación (R² = 0.27), y los días de envío no aportaban nada, así que se quitaron.
+
+El modelo que mejor funcionó fue el que incluye la interacción entre ventas y descuento, es decir, dejando que el efecto del descuento cambie según qué tanto se esté vendiendo. Este modelo subió a explicar un 72% de la variación en la ganancia (R² = 0.72), con mejor AIC y BIC que los demás, así que fue el que se usó como final.
+
+Con este modelo encontramos que más ventas significan más ganancia, más cantidad por orden reduce un poco la ganancia, y sobre todo que el descuento afecta mucho más fuerte a la ganancia cuando la venta es grande, dar descuento en ventas altas le pega más duro al negocio que en ventas pequeñas.
+
+Los supuestos de la regresión (normalidad, varianza pareja) no se cumplieron, algo esperable con una base tan grande. Por eso se corrió el modelo también con errores estándar robustos, y las mismas variables siguieron siendo significativas, lo que da más confianza en el resultado.
+
+Por último, se usó el modelo para predecir: una venta de $500, cantidad 3 y 10% de descuento da una ganancia estimada de $116.51, con un intervalo de predicción del 95% entre $127.53 y $360.55, un rango amplio que muestra bastante incertidumbre para predicciones individuales.
 
 **ANOVA - MANOVA**
 
@@ -202,7 +236,11 @@ En el gráfico de líneas se nota que la categoría Technology tiene las ventas 
 
 **Cluster**
 
+Con el clustering nos dimos cuenta de que no todos los clientes valen lo mismo para la tienda. Hay un grupo pequeño (los VIP) que genera muchísima ganancia, y también hay un grupo que, aunque compran, le está generando pérdidas a la tienda por el exceso de descuentos que recibe. Esto es información súper útil para el negocio, se podrían enfocar más esfuerzos en cuidar a los clientes VIP, y revisar la política de descuentos para el grupo que está generando pérdidas.
+
 **Regresion**
+
+Lo que más nos llamó la atención fue que agregar la interacción entre ventas y descuento cambió por completo la calidad del modelo (de 27% a 72% de variación explicada). Esto nos enseña que, en este negocio, el descuento no afecta igual a todas las ventas — no es lo mismo dar 20% de descuento en una venta pequeña que en una venta grande, y un modelo que no tomara en cuenta esa interacción se estaría perdiendo la parte más importante de la historia.
 
 **ANOVA - MANOVA**
 
@@ -214,7 +252,15 @@ Una limitación importante que se debe mencionar es que, al trabajar con una bas
 
 **Cluster**
 
+- El clustering nos permitió identificar 4 grupos de clientes claramente diferenciados según su comportamiento de compra, uno de clientes VIP, uno que genera pérdidas, y dos grupos intermedios de distinto tamaño y rentabilidad.
+
+- K-means fue el método que mejor separó a los clientes, y sus resultados se confirmaron con clustering jerárquico, lo que nos da confianza en que estos grupos son reales y no producto del azar.
+
 **Regresion**
+
+- El modelo que mejor explica la ganancia es el que incluye la interacción entre ventas y descuento, explicando un 72% de su variación, mucho mejor que el modelo simple sin interacción.
+
+- El descuento es la variable que más le afecta negativamente a la ganancia, y ese efecto se vuelve más fuerte mientras mayor es la venta, algo clave para replantear la política de descuentos de la tienda.
 
 **ANOVA - MANOVA**
 
